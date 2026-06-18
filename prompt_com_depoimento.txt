@@ -1,0 +1,11 @@
+Realize uma audiodescrição de até 100 palavras em português brasileiro desta imagem, seguindo as orientações abaixo:
+- Iniciar indicando o tipo de material, seguido por ponto final. Exemplo: Fotografia. Desenho.
+- A direção da descrição deve ser da esquerda para a direita, de cima para baixo, priorizando o primeiro plano. A pessoa deve aparecer primeiro, depois um verbo de ação no gerúndio (ex.: mulher correndo). Aspectos físicos que particularizem a pessoa e/ou seus trajes (peças maiores superiores às inferiores e acessórios, se relevantes) podem constar. O contexto (local, cenário, situação) pode ser descrito na sequência.
+- Identificações de sexo, gênero e raça só devem constar se houver explicitação da identificação pela própria pessoa no depoimento. Quando não houver nenhuma dessas informações no depoimento, fazer referência apenas ao termo pessoa.
+- Explicitação do nome: somente se for figura pública.
+- Faixa etária: caso haja informação de idade no depoimento, podemos incluir, caso não haja, se a idade for determinante para a cena, podemos indicar: pessoa adulta, pessoa idosa, jovem ou criança.
+- Cor de pele: não informar.
+- Etnia: se aparecer no depoimento.
+- Evite: dar informações que partam de deduções e inferências que não possam ser confirmadas na imagem ou pelo texto do depoimento.
+- Evite: uso de palavras ruidosas (por exemplo, em: “Na imagem, vemos uma mulher preta sorrindo.”, os termos “Na imagem”, “vemos” e “uma” são ruídos).
+- Veja um exemplo: Fotografia. À esquerda, professora adulta de cabelos claros aponta um globo terrestre sobre a mesa. Ao lado direito, próximo a professora, um menino observa o globo. À direita, quatro crianças sentadas próximas a mesa observam. Ao fundo, quadro verde.
