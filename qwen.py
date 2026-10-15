@@ -1,19 +1,53 @@
 import os
+from io import BytesIO
+
+import requests
+from bs4 import BeautifulSoup
+from PIL import Image
+
 import torch
 import matplotlib.pyplot as plt
 
-from PIL import Image
-from transformers import AutoProcessor, AutoModelForImageTextToText
+from transformers import (
+    AutoProcessor,
+    AutoModelForImageTextToText
+)
 
+
+def extrai_imagem_url(url):
+
+    page = requests.get(url, timeout=30)
+    page.raise_for_status()
+
+    soup = BeautifulSoup(page.content, "html.parser")
+
+    div_img = soup.find("div", class_="col pr-lg-0 py-4")
+
+    if div_img is None:
+        raise Exception("Div da imagem não encontrada")
+
+    img = div_img.find("img")
+
+    if img is None:
+        raise Exception("Tag <img> não encontrada")
+
+    return img["src"]
+
+
+# ==========================================
 # CONFIGURAÇÕES
+# ==========================================
+
 model_name = "Qwen/Qwen3-VL-4B-Instruct"
 
-image_folder = "imagens"
-output_folder = "imagens_qwen"
+output_folder = "imagens_qwen_sem_depoimento"
 
 os.makedirs(output_folder, exist_ok=True)
 
+# ==========================================
 # CARREGAR MODELO
+# ==========================================
+
 model = AutoModelForImageTextToText.from_pretrained(
     model_name,
     torch_dtype="auto",
@@ -24,39 +58,76 @@ processor = AutoProcessor.from_pretrained(model_name)
 
 model.eval()
 
+# ==========================================
 # CARREGAR PROMPT
-with open("prompt_sem_depoimento.txt", "r", encoding="utf-8") as f:
+# ==========================================
+
+with open(
+    "prompt_sem_depoimento.txt",
+    "r",
+    encoding="utf-8"
+) as f:
+
     prompt_text = f.read().strip()
 
-# PROCESSAR IMAGENS
-for filename in os.listdir(image_folder):
+# ==========================================
+# LER URLS
+# ==========================================
 
-    if filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+with open(
+    "urls.txt",
+    "r",
+    encoding="utf-8"
+) as f:
 
-        path = os.path.join(image_folder, filename)
+    urls = [linha.strip() for linha in f if linha.strip()]
 
-        # carregar imagem
-        image = Image.open(path).convert("RGB")
+# ==========================================
+# PROCESSAR URLS
+# ==========================================
 
-        # prompt
+for indice, url in enumerate(urls, start=1):
+
+    try:
+
+        print(f"\nProcessando: {url}")
+
+        img_url = extrai_imagem_url(url)
+
+        response = requests.get(
+            img_url,
+            timeout=30
+        )
+
+        response.raise_for_status()
+
+        image = Image.open(
+            BytesIO(response.content)
+        ).convert("RGB")
+
+        # prompt multimodal
         messages = [
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "image": image},
-                    {"type": "text", "text": prompt_text},
-                ],
+                    {
+                        "type": "image",
+                        "image": image
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt_text
+                    }
+                ]
             }
         ]
 
-        # formatar prompt
         text = processor.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True
         )
 
-        # preparar inputs
         inputs = processor(
             text=[text],
             images=[image],
@@ -65,18 +136,22 @@ for filename in os.listdir(image_folder):
 
         inputs = inputs.to(model.device)
 
-        # gerar descrição
         with torch.no_grad():
+
             generated_ids = model.generate(
                 **inputs,
                 max_new_tokens=200,
                 do_sample=False
             )
 
-        # remover tokens do prompt
         generated_ids_trimmed = [
+
             output_ids[len(input_ids):]
-            for input_ids, output_ids in zip(inputs.input_ids, generated_ids)
+
+            for input_ids, output_ids in zip(
+                inputs.input_ids,
+                generated_ids
+            )
         ]
 
         caption = processor.batch_decode(
@@ -85,9 +160,9 @@ for filename in os.listdir(image_folder):
             clean_up_tokenization_spaces=False
         )[0]
 
-    
-        # EXPORTAR COM MATPLOTLIB
-    
+        # ==========================================
+        # EXPORTAR IMAGEM COM LEGENDA
+        # ==========================================
 
         plt.figure(figsize=(10, 10))
 
@@ -101,10 +176,9 @@ for filename in os.listdir(image_folder):
             wrap=True
         )
 
-        # salvar imagem com legenda
         output_path = os.path.join(
             output_folder,
-            f"{os.path.splitext(filename)[0]}_caption.png"
+            f"historia_{indice}_caption.png"
         )
 
         plt.savefig(
@@ -115,8 +189,14 @@ for filename in os.listdir(image_folder):
 
         plt.close()
 
-        print(f"\n{filename}")
-        print(caption)
+        print(f"Imagem: {img_url}")
+        print(f"Resultado:\n{caption}")
         print(f"Salvo em: {output_path}")
+
+    except Exception as e:
+
+        print(
+            f"Erro ao processar {url}: {e}"
+        )
 
 print("\nProcessamento concluído.")

@@ -1,20 +1,69 @@
 import os
+from io import BytesIO
+
+import requests
+from bs4 import BeautifulSoup
+from PIL import Image
+
 import torch
 import matplotlib.pyplot as plt
 
-from PIL import Image
-from transformers import AutoProcessor, AutoModelForImageTextToText
+from transformers import (
+    AutoProcessor,
+    AutoModelForImageTextToText
+)
 
+
+def extrai_historia(url):
+
+    page = requests.get(url)
+    soup = BeautifulSoup(page.content, "html.parser")
+
+    div_img = soup.find(
+        "div",
+        class_="col pr-lg-0 py-4"
+    )
+
+    img = div_img.find("img")
+    img_link = img["src"]
+
+    texto_div = soup.find(
+        "div",
+        id="historia-texto"
+    )
+
+    full_text = texto_div.find(
+        "div",
+        class_="full-text"
+    )
+
+    paragrafos = full_text.find_all("p")
+
+    texto = "\n".join(
+        p.get_text(" ", strip=True)
+        for p in paragrafos
+    )
+
+    return texto, img_link
+
+
+# ==========================================
 # CONFIGURAÇÕES
+# ==========================================
+
 model_name = "HuggingFaceTB/SmolVLM2-2.2B-Instruct"
 
-image_folder = "imagens"
 output_folder = "imagens_smolvlm"
 
 os.makedirs(output_folder, exist_ok=True)
 
-# CARREGAR MODELO
-processor = AutoProcessor.from_pretrained(model_name)
+# ==========================================
+# MODELO
+# ==========================================
+
+processor = AutoProcessor.from_pretrained(
+    model_name
+)
 
 model = AutoModelForImageTextToText.from_pretrained(
     model_name,
@@ -24,25 +73,63 @@ model = AutoModelForImageTextToText.from_pretrained(
 
 model.eval()
 
-# CARREGAR PROMPT
-with open("prompt_sem_depoimento.txt", "r", encoding="utf-8") as f:
+# ==========================================
+# PROMPT
+# ==========================================
+
+with open(
+    "prompt_sem_depoimento.txt",
+    "r",
+    encoding="utf-8"
+) as f:
+
     prompt_text = f.read().strip()
 
-# PROCESSAR IMAGENS
-for filename in os.listdir(image_folder):
+# ==========================================
+# URLS
+# ==========================================
 
-    if filename.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+with open(
+    "urls.txt",
+    "r",
+    encoding="utf-8"
+) as f:
 
-        path = os.path.join(image_folder, filename)
+    urls = [
+        linha.strip()
+        for linha in f
+        if linha.strip()
+    ]
 
-        image = Image.open(path).convert("RGB")
+# ==========================================
+# PROCESSAMENTO
+# ==========================================
+
+for indice, url in enumerate(urls, start=1):
+
+    try:
+
+        _, img_url = extrai_historia(url)
+
+        response = requests.get(img_url)
+        response.raise_for_status()
+
+        image = Image.open(
+            BytesIO(response.content)
+        ).convert("RGB")
 
         messages = [
             {
                 "role": "user",
                 "content": [
-                    {"type": "image", "image": image},
-                    {"type": "text", "text": prompt_text},
+                    {
+                        "type": "image",
+                        "image": image
+                    },
+                    {
+                        "type": "text",
+                        "text": prompt_text
+                    }
                 ]
             }
         ]
@@ -52,7 +139,7 @@ for filename in os.listdir(image_folder):
             add_generation_prompt=True,
             tokenize=True,
             return_dict=True,
-            return_tensors="pt",
+            return_tensors="pt"
         )
 
         inputs = {
@@ -62,7 +149,10 @@ for filename in os.listdir(image_folder):
             for k, v in inputs.items()
         }
 
+        print(inputs.keys())
+
         with torch.no_grad():
+
             generated_ids = model.generate(
                 **inputs,
                 max_new_tokens=200,
@@ -74,13 +164,12 @@ for filename in os.listdir(image_folder):
             skip_special_tokens=True
         )[0]
 
-        # remover o prompt da saída
         if "Assistant:" in generated_text:
-            caption = generated_text.split("Assistant:")[-1].strip()
+            caption = generated_text.split(
+                "Assistant:"
+            )[-1].strip()
         else:
             caption = generated_text.strip()
-
-        # EXPORTAR COM MATPLOTLIB
 
         plt.figure(figsize=(10, 10))
         plt.imshow(image)
@@ -94,7 +183,7 @@ for filename in os.listdir(image_folder):
 
         output_path = os.path.join(
             output_folder,
-            f"{os.path.splitext(filename)[0]}_caption.png"
+            f"historia_{indice}_caption.png"
         )
 
         plt.savefig(
@@ -105,8 +194,13 @@ for filename in os.listdir(image_folder):
 
         plt.close()
 
-        print(f"\n{filename}")
+        print(f"\nURL: {url}")
         print(caption)
-        print(f"Salvo em: {output_path}")
+
+    except Exception as e:
+
+        print(
+            f"Erro ao processar {url}: {e}"
+        )
 
 print("\nProcessamento concluído.")

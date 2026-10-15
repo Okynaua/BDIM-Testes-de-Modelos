@@ -1,0 +1,35 @@
+O modelo Swin-DistilBERTimbau já nasce como um bom ponto de partida porque foi treinado para captioning em português brasileiro. Porém, ele foi treinado em captions traduzidas automaticamente do Flickr30K, então aprende uma linguagem muito “genérica” e internacionalizada.
+
+1. Criar um dataset curado de captions decoloniais
+
+2. Fazer fine-tuning supervisionado (SFT)
+Continual Fine-Tuning (CFT)
+Encaixar o formato das legenda. Estão muito curtas, não de acordo com as audiodescrições que estamos produzindo.
+
+4. RAG (Retrieval-Augmented Generation)
+
+Machine unlearning é usado para:
+
+“fazer o modelo esquecer algo”;
+remover dados específicos;
+compliance/LGPD;
+remover vieses específicos.
+
+Exemplo:
+
+retirar dados pessoais;
+remover um artista do dataset;
+apagar conteúdo sensível.
+
+Mas o problema de vocês não é “esquecer Flickr30K”. (será?????)
+É:
+
+reaprender linguagem;
+incorporar contexto brasileiro;
+mudar o estilo discursivo.
+
+
+Flickr30K possui legendas muito pequenas, as legendas geradas tbm são.
+
+
+Swin-DistilBERTimbau é um Captioning clássico, seu objetivo é resumir a imagem rapidamente.
